@@ -1,22 +1,22 @@
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 @import "tailwindcss";
 
 :root {
   --color-primary: #2563EB;
   --color-primary-dark: #1D4ED8;
-  --color-primary-light: #DBEAFE;
-  --color-text: #1F2937;
-  --color-text-muted: #6B7280;
-  --color-bg: #FFFFFF;
-  --color-border: #E5E7EB;
-}
-
-* {
-  box-sizing: border-box;
+  --color-cta: #F97316;
+  --color-cta-hover: #EA580C;
+  --color-text: #1E293B;
+  --color-text-body: #475569;
+  --color-text-muted: #94A3B8;
+  --color-bg: #F8FAFC;
+  --color-card: #FFFFFF;
+  --color-border: #E2E8F0;
 }
 
 html {
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  scroll-behavior: smooth;
   color: var(--color-text);
   background-color: var(--color-bg);
 }
@@ -25,4 +25,47 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* ── 자가진단 분석 연출용 커스텀 애니메이션 ── */
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes orbit {
+  from { transform: rotate(0deg) translateX(48px) rotate(0deg); }
+  to { transform: rotate(360deg) translateX(48px) rotate(-360deg); }
+}
+
+@keyframes fade-in-out {
+  0%   { opacity: 0; transform: translateY(8px); }
+  20%  { opacity: 1; transform: translateY(0); }
+  80%  { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-8px); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+
+.animate-orbit-1 {
+  animation: orbit 3s linear infinite;
+}
+
+.animate-orbit-2 {
+  animation: orbit 2.5s linear infinite;
+}
+
+.animate-orbit-3 {
+  animation: orbit 4s linear infinite;
+}
+
+.animate-fade-text {
+  animation: fade-in-out 1s ease-in-out;
 }

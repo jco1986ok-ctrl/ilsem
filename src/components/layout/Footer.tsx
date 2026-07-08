@@ -1,31 +1,39 @@
 import Link from 'next/link';
 
 export default function Footer() {
-  const currentYear = new Date().getFullYear();
-
   return (
-    <footer className="bg-gray-50 border-t border-gray-200 mt-auto">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="text-center md:text-left">
-            <p className="text-sm font-semibold text-gray-700">일셈</p>
-            <p className="text-xs text-gray-500 mt-1">근로자를 위한 무료 계산기 서비스</p>
+    <footer className="bg-slate-900 text-slate-400">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* 메인 푸터 영역 */}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8 mb-8">
+          {/* 로고 */}
+          <div>
+            <p className="text-white text-lg font-bold">일셈</p>
+            <p className="text-sm text-slate-500 mt-1">근로자를 위한 계산기</p>
           </div>
 
-          <nav className="flex flex-wrap justify-center gap-4 text-xs text-gray-500">
-            <Link href="/" className="hover:text-blue-600 transition-colors">홈</Link>
-            <Link href="/calc/average-wage" className="hover:text-blue-600 transition-colors">계산기</Link>
-            <Link href="/report" className="hover:text-blue-600 transition-colors">종합리포트</Link>
-            <Link href="/privacy" className="hover:text-blue-600 transition-colors">개인정보처리방침</Link>
+          {/* 링크 */}
+          <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+            <Link href="/terms" className="hover:text-white transition-colors">
+              이용약관
+            </Link>
+            <Link href="/privacy" className="hover:text-white transition-colors">
+              개인정보처리방침
+            </Link>
+            <a href="mailto:contact@ilsem.kr" className="hover:text-white transition-colors">
+              문의하기
+            </a>
           </nav>
+
+          {/* 저작권 */}
+          <p className="text-sm text-slate-500">© 2025 일셈. All rights reserved.</p>
         </div>
 
-        <div className="mt-6 pt-6 border-t border-gray-200 text-center">
-          <p className="text-xs text-gray-400">
-            © {currentYear} 일셈. 본 서비스의 계산 결과는 참고용이며, 법적 효력이 없습니다.
-          </p>
-          <p className="text-xs text-gray-400 mt-1">
-            정확한 판단을 위해 전문가에게 문의하시기 바랍니다.
+        {/* 하단 안내 */}
+        <div className="border-t border-slate-800 pt-6">
+          <p className="text-xs text-slate-500 leading-relaxed">
+            일셈은 법률 자문 서비스가 아닙니다. 정확한 판단은 전문 노무사와 상담하세요.
+            본 서비스의 계산 결과는 참고용이며, 실제 지급액과 다를 수 있습니다.
           </p>
         </div>
       </div>

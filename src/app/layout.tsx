@@ -1,44 +1,54 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+};
+
 export const metadata: Metadata = {
   title: {
-    default: '일셈 - 근로자를 위한 계산기',
+    default: '일셈 — 근로자를 위한 계산기 | 산재보상·퇴직금·연차수당',
     template: '%s | 일셈',
   },
-  description: '산재보상, 퇴직금, 연차수당, 평균임금을 한 곳에서 계산하세요. 근로자를 위한 무료 온라인 계산기 서비스.',
-  keywords: ['퇴직금 계산기', '평균임금', '산재보상', '연차수당', '4대보험', '산재보험', '휴업급여', '장해급여'],
+  description:
+    '산재 휴업급여, 장해급여, 퇴직금, 연차수당, 4대보험료까지. 2025년 최신 법령이 반영된 무료 계산기로 3분 안에 계산하세요.',
+  keywords: [
+    '평균임금 계산기', '퇴직금 계산기', '산재보상', '휴업급여', '장해급여',
+    '연차수당', '4대보험', '산재보험', '유족급여', '과로 위험도',
+  ],
   authors: [{ name: '일셈' }],
   creator: '일셈',
-  metadataBase: new URL('https://ilsem.com'),
+  metadataBase: new URL('https://ilsem.vercel.app'),
   openGraph: {
     type: 'website',
     locale: 'ko_KR',
     siteName: '일셈',
-    title: '일셈 - 근로자를 위한 계산기',
-    description: '산재보상, 퇴직금, 연차수당, 평균임금을 한 곳에서 계산하세요.',
+    title: '일셈 — 근로자를 위한 계산기 | 산재보상·퇴직금·연차수당',
+    description:
+      '산재 휴업급여, 장해급여, 퇴직금, 연차수당, 4대보험료까지. 2025년 최신 법령이 반영된 무료 계산기로 3분 안에 계산하세요.',
+    url: 'https://ilsem.vercel.app',
   },
   twitter: {
     card: 'summary_large_image',
-    title: '일셈 - 근로자를 위한 계산기',
-    description: '산재보상, 퇴직금, 연차수당, 평균임금을 한 곳에서 계산하세요.',
+    title: '일셈 — 근로자를 위한 계산기',
+    description:
+      '산재 휴업급여, 장해급여, 퇴직금, 연차수당, 4대보험료까지. 2025년 최신 법령이 반영된 무료 계산기.',
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko">
       <body className="flex flex-col min-h-screen antialiased">
         <Header />
-        <main className="flex-1">
-          {children}
-        </main>
+        <main className="flex-1">{children}</main>
         <Footer />
       </body>
     </html>

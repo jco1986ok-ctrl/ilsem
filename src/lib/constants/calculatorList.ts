@@ -16,6 +16,7 @@ export const calculatorList: CalcMenuItem[] = [
   // 근로자 필수 계산기
   { label: '평균임금 계산기',     href: '/calc/average-wage',         emoji: '💰', group: 'worker' },
   { label: '퇴직금 계산기',       href: '/calc/retirement-pay',       emoji: '🏦', group: 'worker' },
+  { label: '부당해고 보상금',     href: '/calc/unfair-dismissal-pay', emoji: '⚖️', group: 'worker' },
   { label: '연차수당 계산기',     href: '/calc/annual-leave-pay',     emoji: '📅', group: 'worker' },
   { label: '4대보험 계산기',      href: '/calc/four-insurance',       emoji: '🛡️', group: 'worker' },
 ];

@@ -79,6 +79,13 @@ const laborCalcs = [
     badge: null,
   },
   {
+    emoji: '⚖️',
+    title: '부당해고 보상금 계산기',
+    desc: '해고예고수당·금전보상금을 한 번에 계산합니다',
+    href: '/calc/unfair-dismissal-pay',
+    badge: 'NEW',
+  },
+  {
     emoji: '🗓️',
     title: '연차수당 계산기',
     desc: '미사용 연차에 대한 수당을 계산합니다',

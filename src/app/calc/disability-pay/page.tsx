@@ -3,17 +3,8 @@ import DisabilityPayCalculator from '@/components/calculators/DisabilityPayCalcu
 
 export const metadata: Metadata = {
   title: '산재 장해급여 계산기 | 일셈',
-  description:
-    '산재 장해등급(1~14급)에 따른 장해급여를 계산해보세요. 연금·일시금·일부연금 금액을 한눈에 비교하고, 산재보험법 제57조 기준의 정확한 보상금을 확인하세요.',
-  keywords: [
-    '산재 장해급여 계산기',
-    '장해급여 계산',
-    '장해등급 보상금',
-    '산재 장해연금',
-    '장해일시금',
-    '노동력 상실률',
-    '산재보험법 제57조',
-  ],
+  description: '산재 장해등급에 따른 장해보상연금·일시금을 계산합니다. 1~14급 등급별 보상일수, 2026년 최저·최고 보상기준금액 반영.',
+  keywords: '산재 장해급여 계산기,장해보상연금,장해보상일시금,장해등급,산재보험법 제57조,평균임금,노동력상실률',
 };
 
 export default function DisabilityPayPage() {

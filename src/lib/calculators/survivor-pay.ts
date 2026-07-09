@@ -5,7 +5,7 @@
  *  - 유족급여    산재보험법 제62조
  *  - 유족보상연금 산재보험법 제62조 제2항, 제64조
  *  - 장의비      산재보험법 제71조
- *  - 보상기준    고용노동부 고시 (2026년 기준)
+ *  - 보상기준    고용노동부 고시 제2025-84호 (2026년 기준)
  */
 
 // ── 2026년 상수 ────────────────────────────────────────────────
@@ -14,90 +14,74 @@ export const SURVIVOR_CONSTANTS_2026 = {
   year: 2026,
 
   // 보상기준금액 (1일)
-  minCompensationDaily: 82_560,   // 최저시급 10,320원 × 8h
+  minCompensationDaily: 82_560,
   maxCompensationDaily: 268_299,
 
-  // 유족보상연금 기본 비율 (급여기초연액 = 평균임금 × 365)
-  pensionBaseRate:     0.47,      // 기본금액: 연액 × 47%
-  pensionAddRate:      0.05,      // 수급자격자 1인당 가산: 연액 × 5%
-  pensionAddMax:       0.20,      // 가산 상한: 연액 × 20% (4인 이상)
+  // 유족보상연금 비율
+  pensionBaseRate:  0.47,   // 기본금액: 급여기초연액 × 47%
+  pensionBonusRate: 0.05,   // 수급자격자 1인당 가산: × 5%
+  pensionBonusMax:  0.20,   // 가산 상한: × 20%
 
   // 일시금 보상일수
-  lumpSumDays:        1_300,      // 수급자격자 없을 때
-  halfLumpSumDays:      650,      // 반액연금+반액일시금의 일시금 부분
+  lumpSumFullDays: 1_300,   // 유족보상일시금 (수급자격자 없음)
+  lumpSumHalfDays:   650,   // 반액연금+반액일시금의 일시금 부분
 
   // 장의비
-  funeralDays:          120,
-  funeralMin:    13_943_000,      // 최저 장의비 (2026년 고시)
-  funeralMax:    19_279_760,      // 최고 장의비 (2026년 고시)
+  funeralDays: 120,
+  funeralMin:  13_943_000,  // 2026년 고시
+  funeralMax:  19_279_760,  // 2026년 고시
 } as const;
 
-// ── 입력 ──────────────────────────────────────────────────────
+// ── 인터페이스 ────────────────────────────────────────────────
 
-export type AverageWageMethod = 'direct' | 'calculate';
-
-/**
- * 유족급여 지급 유형
- *  pension-full  : 유족보상연금 전액
- *  pension-half  : 반액연금 + 반액일시금 (수급자격자 있음)
- *  lump-sum      : 유족보상일시금 (수급자격자 없음)
- */
-export type SurvivorPayType = 'pension-full' | 'pension-half' | 'lump-sum';
+export type PaymentType = 'pension' | 'half' | 'lump-sum' | 'compare';
 
 export interface SurvivorPayInput {
-  averageWageMethod: AverageWageMethod;
-
-  /** 방식1: 1일 평균임금 직접 입력 */
-  dailyAverageWage?: number;
-
-  /** 방식2: 3개월 임금 총액 기반 계산 */
-  totalWage3Months?: number;
-  totalDays3Months?: number;
-
-  /** 지급 유형 */
-  payType: SurvivorPayType;
-
-  /**
-   * 수급자격자 수 (pension-full / pension-half 시 필요)
-   * 0이면 lump-sum으로 강제 전환
-   */
-  eligibleCount: number;
+  dailyAvgWage: number;          // 1일 평균임금
+  qualifiedSurvivors: number;    // 수급자격자 수 (0~4+)
+  paymentType: PaymentType;
 }
 
-// ── 출력 ──────────────────────────────────────────────────────
-
 export interface SurvivorPayResult {
-  /** 입력된 1일 평균임금 */
-  rawDailyWage: number;
-  /** 보상기준 적용 후 1일 평균임금 */
-  adjustedDailyWage: number;
-  /** 보상기준 조정 여부 */
-  isAdjusted: boolean;
-  adjustedReason?: string;
+  appliedWage: number;           // 적용 평균임금 (최저/최고 보정)
+  wageAdjusted: boolean;
+  adjustmentType?: 'min' | 'max';
+  originalWage: number;
 
-  /** 급여기초연액 (조정 후 평균임금 × 365) */
-  annualBase: number;
+  survivor: {
+    hasQualifiedSurvivors: boolean;
 
-  payType: SurvivorPayType;
-  payTypeLabel: string;
+    pension?: {
+      baseAnnualAmount: number;  // 급여기초연액 (평균임금 × 365)
+      basicRate: number;         // 47 (%)
+      bonusRate: number;         // 수급자격자 수 × 5, max 20 (%)
+      basicAmount: number;       // 기본금액
+      bonusAmount: number;       // 가산금액
+      annualTotal: number;       // 연간 연금 합계
+      monthlyTotal: number;      // 월간 연금
+    };
 
-  /** [연금 전액 / 반액] 연간 연금액 */
-  annualPension?: number;
-  /** [연금 전액 / 반액] 월 연금액 (연간 ÷ 12) */
-  monthlyPension?: number;
-  /** [반액 / 일시금] 일시금 */
-  lumpSum?: number;
+    halfOption?: {
+      lumpSum: number;           // 일시금 50% (평균임금 × 650일분)
+      annualPension: number;     // 연금 50%
+      monthlyPension: number;
+    };
 
-  /** 수급자격자 수 */
-  eligibleCount: number;
-  /** 연금 가산 비율 (%) */
-  pensionAddRatePct?: number;
+    lumpSum: {
+      days: number;              // 1,300일
+      amount: number;            // 평균임금 × 1,300
+    };
 
-  /** 장의비 */
-  funeralRaw: number;
-  funeral: number;
-  funeralCapped: boolean;
-  funeralCapReason?: string;
+    breakEvenYears?: number;     // 전액연금으로 일시금 총액 초과까지 걸리는 연수
+  };
+
+  funeral: {
+    calculatedAmount: number;    // 평균임금 × 120
+    appliedAmount: number;       // 최저/최고 적용 후
+    min: number;
+    max: number;
+    adjustmentApplied: 'none' | 'min' | 'max';
+  };
 }
 
 // ── 계산 ──────────────────────────────────────────────────────
@@ -105,106 +89,95 @@ export interface SurvivorPayResult {
 export function calculateSurvivorPay(input: SurvivorPayInput): SurvivorPayResult {
   const C = SURVIVOR_CONSTANTS_2026;
 
-  // Step 1: 평균임금 산정
-  let rawDailyWage: number;
-  if (input.averageWageMethod === 'direct') {
-    rawDailyWage = input.dailyAverageWage!;
-  } else {
-    rawDailyWage = Math.round(
-      input.totalWage3Months! / (input.totalDays3Months || 90)
-    );
+  // Step 1: 평균임금 보정
+  let appliedWage  = input.dailyAvgWage;
+  let wageAdjusted = false;
+  let adjustmentType: 'min' | 'max' | undefined;
+
+  if (input.dailyAvgWage < C.minCompensationDaily) {
+    appliedWage    = C.minCompensationDaily;
+    wageAdjusted   = true;
+    adjustmentType = 'min';
+  } else if (input.dailyAvgWage > C.maxCompensationDaily) {
+    appliedWage    = C.maxCompensationDaily;
+    wageAdjusted   = true;
+    adjustmentType = 'max';
   }
 
-  // Step 2: 보상기준금액 조정
-  let adjustedDailyWage = rawDailyWage;
-  let isAdjusted = false;
-  let adjustedReason: string | undefined;
+  // Step 2: 수급자격자 여부
+  const n                   = Math.max(0, input.qualifiedSurvivors);
+  const hasQualifiedSurvivors = n > 0;
 
-  if (rawDailyWage < C.minCompensationDaily) {
-    adjustedDailyWage = C.minCompensationDaily;
-    isAdjusted = true;
-    adjustedReason = `평균임금(${rawDailyWage.toLocaleString()}원)이 1일 최저보상기준금액(${C.minCompensationDaily.toLocaleString()}원) 미만 → 최저 적용`;
-  } else if (rawDailyWage > C.maxCompensationDaily) {
-    adjustedDailyWage = C.maxCompensationDaily;
-    isAdjusted = true;
-    adjustedReason = `평균임금(${rawDailyWage.toLocaleString()}원)이 1일 최고보상기준금액(${C.maxCompensationDaily.toLocaleString()}원) 초과 → 최고 적용`;
+  // Step 3: 연금 계산 (수급자격자 있을 때)
+  let pension: SurvivorPayResult['survivor']['pension'];
+  let halfOption: SurvivorPayResult['survivor']['halfOption'];
+
+  if (hasQualifiedSurvivors) {
+    const baseAnnualAmount = Math.round(appliedWage * 365);
+    const bonusRateFraction = Math.min(C.pensionBonusRate * n, C.pensionBonusMax);
+    const basicRate  = Math.round(C.pensionBaseRate * 100);    // 47
+    const bonusRate  = Math.round(bonusRateFraction * 100);    // 5~20
+
+    const basicAmount  = Math.round(baseAnnualAmount * C.pensionBaseRate);
+    const bonusAmount  = Math.round(baseAnnualAmount * bonusRateFraction);
+    const annualTotal  = basicAmount + bonusAmount;
+    const monthlyTotal = Math.round(annualTotal / 12);
+
+    pension = { baseAnnualAmount, basicRate, bonusRate, basicAmount, bonusAmount, annualTotal, monthlyTotal };
+
+    halfOption = {
+      lumpSum:        Math.round(appliedWage * C.lumpSumHalfDays),
+      annualPension:  Math.round(annualTotal * 0.5),
+      monthlyPension: Math.round(monthlyTotal * 0.5),
+    };
   }
 
-  // Step 3: 급여기초연액
-  const annualBase = Math.round(adjustedDailyWage * 365);
+  // Step 4: 유족보상일시금 (항상 계산)
+  const lumpSumAmount = Math.round(appliedWage * C.lumpSumFullDays);
 
-  // Step 4: 수급자격자 수에 따른 지급 유형 결정
-  const eligibleCount = Math.max(0, input.eligibleCount);
-  let payType: SurvivorPayType = input.payType;
-  if (eligibleCount === 0) payType = 'lump-sum';
-
-  const payTypeLabel = {
-    'pension-full': '유족보상연금 (전액)',
-    'pension-half': '반액연금 + 반액일시금',
-    'lump-sum':     '유족보상일시금',
-  }[payType];
-
-  // Step 5: 유족보상연금 계산 (full / half 공통)
-  let annualPension: number | undefined;
-  let monthlyPension: number | undefined;
-  let lumpSum: number | undefined;
-  let pensionAddRatePct: number | undefined;
-
-  if (payType === 'pension-full' || payType === 'pension-half') {
-    const addCount      = Math.min(eligibleCount, 4); // 4인 이상은 동일 상한
-    const addRate       = Math.min(C.pensionAddRate * addCount, C.pensionAddMax);
-    pensionAddRatePct   = Math.round(addRate * 100); // 5 / 10 / 15 / 20
-
-    const fullAnnual    = Math.round(annualBase * (C.pensionBaseRate + addRate));
-    const fullMonthly   = Math.round(fullAnnual / 12);
-
-    if (payType === 'pension-full') {
-      annualPension  = fullAnnual;
-      monthlyPension = fullMonthly;
-    } else {
-      // 반액연금
-      annualPension  = Math.round(fullAnnual * 0.5);
-      monthlyPension = Math.round(fullMonthly * 0.5);
-      // 반액일시금 = 평균임금 × 650일
-      lumpSum = Math.round(adjustedDailyWage * C.halfLumpSumDays);
-    }
-  } else {
-    // 유족보상일시금 = 평균임금 × 1,300일
-    lumpSum = Math.round(adjustedDailyWage * C.lumpSumDays);
+  // Step 5: 손익분기점 (연금 vs 일시금)
+  let breakEvenYears: number | undefined;
+  if (pension) {
+    // 전액 연금을 받아 일시금(1,300일분)을 넘기까지 걸리는 연수
+    breakEvenYears = parseFloat((lumpSumAmount / pension.annualTotal).toFixed(1));
   }
 
   // Step 6: 장의비
-  const funeralRaw   = Math.round(adjustedDailyWage * C.funeralDays);
-  let funeral        = funeralRaw;
-  let funeralCapped  = false;
-  let funeralCapReason: string | undefined;
+  const calculatedFuneral = Math.round(appliedWage * C.funeralDays);
+  let appliedFuneral      = calculatedFuneral;
+  let funeralAdj: 'none' | 'min' | 'max' = 'none';
 
-  if (funeralRaw < C.funeralMin) {
-    funeral         = C.funeralMin;
-    funeralCapped   = true;
-    funeralCapReason = `산정액(${funeralRaw.toLocaleString()}원)이 최저 장의비(${C.funeralMin.toLocaleString()}원) 미만 → 최저 적용`;
-  } else if (funeralRaw > C.funeralMax) {
-    funeral         = C.funeralMax;
-    funeralCapped   = true;
-    funeralCapReason = `산정액(${funeralRaw.toLocaleString()}원)이 최고 장의비(${C.funeralMax.toLocaleString()}원) 초과 → 최고 적용`;
+  if (calculatedFuneral < C.funeralMin) {
+    appliedFuneral = C.funeralMin;
+    funeralAdj     = 'min';
+  } else if (calculatedFuneral > C.funeralMax) {
+    appliedFuneral = C.funeralMax;
+    funeralAdj     = 'max';
   }
 
   return {
-    rawDailyWage,
-    adjustedDailyWage,
-    isAdjusted,
-    adjustedReason,
-    annualBase,
-    payType,
-    payTypeLabel,
-    annualPension,
-    monthlyPension,
-    lumpSum,
-    eligibleCount,
-    pensionAddRatePct,
-    funeralRaw,
-    funeral,
-    funeralCapped,
-    funeralCapReason,
+    appliedWage,
+    wageAdjusted,
+    adjustmentType,
+    originalWage: input.dailyAvgWage,
+
+    survivor: {
+      hasQualifiedSurvivors,
+      pension,
+      halfOption,
+      lumpSum: {
+        days:   C.lumpSumFullDays,
+        amount: lumpSumAmount,
+      },
+      breakEvenYears,
+    },
+
+    funeral: {
+      calculatedAmount: calculatedFuneral,
+      appliedAmount:    appliedFuneral,
+      min:              C.funeralMin,
+      max:              C.funeralMax,
+      adjustmentApplied: funeralAdj,
+    },
   };
 }

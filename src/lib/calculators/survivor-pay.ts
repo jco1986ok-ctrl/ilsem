@@ -8,29 +8,9 @@
  *  - 보상기준    고용노동부 고시 제2025-84호 (2026년 기준)
  */
 
-// ── 2026년 상수 ────────────────────────────────────────────────
+import { SURVIVOR_PAY_CONSTANTS } from '@/constants/survivor-pay';
 
-export const SURVIVOR_CONSTANTS_2026 = {
-  year: 2026,
-
-  // 보상기준금액 (1일)
-  minCompensationDaily: 82_560,
-  maxCompensationDaily: 268_299,
-
-  // 유족보상연금 비율
-  pensionBaseRate:  0.47,   // 기본금액: 급여기초연액 × 47%
-  pensionBonusRate: 0.05,   // 수급자격자 1인당 가산: × 5%
-  pensionBonusMax:  0.20,   // 가산 상한: × 20%
-
-  // 일시금 보상일수
-  lumpSumFullDays: 1_300,   // 유족보상일시금 (수급자격자 없음)
-  lumpSumHalfDays:   650,   // 반액연금+반액일시금의 일시금 부분
-
-  // 장의비
-  funeralDays: 120,
-  funeralMin:  13_943_000,  // 2026년 고시
-  funeralMax:  19_279_760,  // 2026년 고시
-} as const;
+const C = SURVIVOR_PAY_CONSTANTS;
 
 // ── 인터페이스 ────────────────────────────────────────────────
 
@@ -87,71 +67,68 @@ export interface SurvivorPayResult {
 // ── 계산 ──────────────────────────────────────────────────────
 
 export function calculateSurvivorPay(input: SurvivorPayInput): SurvivorPayResult {
-  const C = SURVIVOR_CONSTANTS_2026;
-
   // Step 1: 평균임금 보정
-  let appliedWage  = input.dailyAvgWage;
-  let wageAdjusted = false;
+  let appliedWage    = input.dailyAvgWage;
+  let wageAdjusted   = false;
   let adjustmentType: 'min' | 'max' | undefined;
 
-  if (input.dailyAvgWage < C.minCompensationDaily) {
-    appliedWage    = C.minCompensationDaily;
+  if (input.dailyAvgWage < C.MIN_DAILY_BASE_2026) {
+    appliedWage    = C.MIN_DAILY_BASE_2026;
     wageAdjusted   = true;
     adjustmentType = 'min';
-  } else if (input.dailyAvgWage > C.maxCompensationDaily) {
-    appliedWage    = C.maxCompensationDaily;
+  } else if (input.dailyAvgWage > C.MAX_DAILY_BASE_2026) {
+    appliedWage    = C.MAX_DAILY_BASE_2026;
     wageAdjusted   = true;
     adjustmentType = 'max';
   }
 
   // Step 2: 수급자격자 여부
-  const n                   = Math.max(0, input.qualifiedSurvivors);
+  const n                     = Math.max(0, input.qualifiedSurvivors);
   const hasQualifiedSurvivors = n > 0;
 
   // Step 3: 연금 계산 (수급자격자 있을 때)
-  let pension: SurvivorPayResult['survivor']['pension'];
+  let pension:    SurvivorPayResult['survivor']['pension'];
   let halfOption: SurvivorPayResult['survivor']['halfOption'];
 
   if (hasQualifiedSurvivors) {
-    const baseAnnualAmount = Math.round(appliedWage * 365);
-    const bonusRateFraction = Math.min(C.pensionBonusRate * n, C.pensionBonusMax);
-    const basicRate  = Math.round(C.pensionBaseRate * 100);    // 47
-    const bonusRate  = Math.round(bonusRateFraction * 100);    // 5~20
+    const baseAnnualAmount    = Math.round(appliedWage * 365);
+    const bonusRateFraction   = Math.min(C.PENSION_BONUS_RATE_PER_PERSON * n, C.PENSION_BONUS_RATE_MAX);
+    const basicRate           = Math.round(C.PENSION_BASIC_RATE * 100);   // 47
+    const bonusRate           = Math.round(bonusRateFraction * 100);      // 5~20
 
-    const basicAmount  = Math.round(baseAnnualAmount * C.pensionBaseRate);
-    const bonusAmount  = Math.round(baseAnnualAmount * bonusRateFraction);
-    const annualTotal  = basicAmount + bonusAmount;
-    const monthlyTotal = Math.round(annualTotal / 12);
+    const basicAmount         = Math.round(baseAnnualAmount * C.PENSION_BASIC_RATE);
+    const bonusAmount         = Math.round(baseAnnualAmount * bonusRateFraction);
+    const annualTotal         = basicAmount + bonusAmount;
+    const monthlyTotal        = Math.round(annualTotal / 12);
 
     pension = { baseAnnualAmount, basicRate, bonusRate, basicAmount, bonusAmount, annualTotal, monthlyTotal };
 
     halfOption = {
-      lumpSum:        Math.round(appliedWage * C.lumpSumHalfDays),
+      lumpSum:        Math.round(appliedWage * C.HALF_LUMP_SUM_DAYS),
       annualPension:  Math.round(annualTotal * 0.5),
       monthlyPension: Math.round(monthlyTotal * 0.5),
     };
   }
 
   // Step 4: 유족보상일시금 (항상 계산)
-  const lumpSumAmount = Math.round(appliedWage * C.lumpSumFullDays);
+  const lumpSumAmount = Math.round(appliedWage * C.LUMP_SUM_DAYS);
 
-  // Step 5: 손익분기점 (연금 vs 일시금)
+  // Step 5: 손익분기점 (전액연금 vs 일시금)
   let breakEvenYears: number | undefined;
   if (pension) {
-    // 전액 연금을 받아 일시금(1,300일분)을 넘기까지 걸리는 연수
     breakEvenYears = parseFloat((lumpSumAmount / pension.annualTotal).toFixed(1));
   }
 
   // Step 6: 장의비
-  const calculatedFuneral = Math.round(appliedWage * C.funeralDays);
-  let appliedFuneral      = calculatedFuneral;
+  const calculatedFuneral      = Math.round(appliedWage * C.FUNERAL_DAYS);
+  let appliedFuneral            = calculatedFuneral;
   let funeralAdj: 'none' | 'min' | 'max' = 'none';
 
-  if (calculatedFuneral < C.funeralMin) {
-    appliedFuneral = C.funeralMin;
+  if (calculatedFuneral < C.FUNERAL_MIN_2026) {
+    appliedFuneral = C.FUNERAL_MIN_2026;
     funeralAdj     = 'min';
-  } else if (calculatedFuneral > C.funeralMax) {
-    appliedFuneral = C.funeralMax;
+  } else if (calculatedFuneral > C.FUNERAL_MAX_2026) {
+    appliedFuneral = C.FUNERAL_MAX_2026;
     funeralAdj     = 'max';
   }
 
@@ -166,17 +143,17 @@ export function calculateSurvivorPay(input: SurvivorPayInput): SurvivorPayResult
       pension,
       halfOption,
       lumpSum: {
-        days:   C.lumpSumFullDays,
+        days:   C.LUMP_SUM_DAYS,
         amount: lumpSumAmount,
       },
       breakEvenYears,
     },
 
     funeral: {
-      calculatedAmount: calculatedFuneral,
-      appliedAmount:    appliedFuneral,
-      min:              C.funeralMin,
-      max:              C.funeralMax,
+      calculatedAmount:  calculatedFuneral,
+      appliedAmount:     appliedFuneral,
+      min:               C.FUNERAL_MIN_2026,
+      max:               C.FUNERAL_MAX_2026,
       adjustmentApplied: funeralAdj,
     },
   };

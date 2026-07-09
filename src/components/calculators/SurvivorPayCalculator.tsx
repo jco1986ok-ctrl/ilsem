@@ -3,15 +3,15 @@
 import { useState } from 'react';
 import {
   calculateSurvivorPay,
-  SURVIVOR_CONSTANTS_2026,
   type SurvivorPayInput,
   type SurvivorPayResult,
   type PaymentType,
 } from '@/lib/calculators/survivor-pay';
+import { SURVIVOR_PAY_CONSTANTS } from '@/constants/survivor-pay';
 import { useNumberFormat } from '@/hooks/useNumberFormat';
 import { formatWon } from '@/lib/helpers';
 
-const C = SURVIVOR_CONSTANTS_2026;
+const C = SURVIVOR_PAY_CONSTANTS;
 
 // ── 보조 컴포넌트 ─────────────────────────────────────────────
 
@@ -78,7 +78,7 @@ function HalfDetail({ r }: { r: SurvivorPayResult }) {
       <Row label="연간" value={formatWon(h.annualPension)} indent accent />
       <Row label="월" value={formatWon(h.monthlyPension)} indent accent />
       <hr className="border-slate-100" />
-      <Row label={`반액 일시금 (평균임금 × ${C.lumpSumHalfDays}일)`} value={formatWon(h.lumpSum)} bold green />
+      <Row label={`반액 일시금 (평균임금 × ${C.HALF_LUMP_SUM_DAYS}일)`} value={formatWon(h.lumpSum)} bold green />
     </SectionCard>
   );
 }
@@ -87,7 +87,7 @@ function LumpSumDetail({ r }: { r: SurvivorPayResult }) {
   return (
     <SectionCard title="유족보상일시금" icon="📊" law="산재보험법 제62조 제1항">
       <Row label="적용 평균임금" value={formatWon(r.appliedWage)} />
-      <Row label="보상일수" value={`${C.lumpSumFullDays}일`} />
+      <Row label="보상일수" value={`${C.LUMP_SUM_DAYS}일`} />
       <hr className="border-slate-100" />
       <Row label="유족보상일시금" value={formatWon(r.survivor.lumpSum.amount)} bold accent />
     </SectionCard>
@@ -131,7 +131,7 @@ function CompareView({ r }: { r: SurvivorPayResult }) {
           </p>
           <p className="text-xl font-bold text-[#1E293B] tabular-nums">{formatWon(ls.amount)}</p>
           <p className="text-xs text-slate-400 mt-1">일시금 전액</p>
-          <p className="text-xs text-slate-500 mt-2">{C.lumpSumFullDays}일분</p>
+          <p className="text-xs text-slate-500 mt-2">{C.LUMP_SUM_DAYS}일분</p>
         </div>
       </div>
 
@@ -322,8 +322,8 @@ export default function SurvivorPayCalculator() {
                 입력 평균임금 <strong>{formatWon(result.originalWage)}</strong>이
                 1일 {result.adjustmentType === 'min' ? '최저' : '최고'}보상기준금액
                 ({result.adjustmentType === 'min'
-                  ? formatWon(C.minCompensationDaily)
-                  : formatWon(C.maxCompensationDaily)}) {result.adjustmentType === 'min' ? '미만' : '초과'} →
+                  ? formatWon(C.MIN_DAILY_BASE_2026)
+                  : formatWon(C.MAX_DAILY_BASE_2026)}) {result.adjustmentType === 'min' ? '미만' : '초과'} →
                 보정 적용 <strong>{formatWon(result.appliedWage)}</strong>
               </p>
             </div>
@@ -364,7 +364,7 @@ export default function SurvivorPayCalculator() {
           {/* 장의비 */}
           <SectionCard title="장의비" icon="🌿" law="산재보험법 제71조">
             <Row label="적용 평균임금" value={formatWon(result.appliedWage)} />
-            <Row label="보상일수" value={`${C.funeralDays}일`} />
+            <Row label="보상일수" value={`${C.FUNERAL_DAYS}일`} />
             <Row label="산정액" value={formatWon(result.funeral.calculatedAmount)} />
             {result.funeral.adjustmentApplied !== 'none' && (
               <>

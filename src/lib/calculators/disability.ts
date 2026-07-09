@@ -2,126 +2,142 @@
  * 산재 장해급여 계산기 (산재보험법 제57조)
  *
  * [지급 방식]
- *   1~3급: 연금만 지급 (pension-only)
- *   4~7급: 연금 또는 일시금 선택 (choice)
- *   8~14급: 일시금만 지급 (lump-sum-only)
+ *   1~3급 (pension-only)  : 연금만
+ *   4~7급 (choice)        : 연금 또는 일시금 선택 — 결과에 둘 다 + 손익분기 포함
+ *   8~14급 (lump-sum-only): 일시금만
  *
- * [연금 계산]
- *   연간 연금 = 1일 평균임금 × 연금 지급일수
- *   월 연금   = 연간 연금 ÷ 12
- *
- * [일시금 계산]
- *   일시금 = 1일 평균임금 × 일시금 지급일수
- *
- * [4~7급 연금 선택 시 유의]
- *   연금을 선택하면 즉시 일시금의 50%를 선급(전불)받고
- *   나머지를 연금으로 수령하는 '일부연금' 제도가 있음 (참고 표시만)
+ * [평균임금 보정]
+ *   최저보상기준금액 미달 시 최저기준으로 올림
+ *   최고보상기준금액 초과 시 최고기준으로 내림
  */
 
-import { DISABILITY_TABLE, DisabilityGrade, DisabilityType, getGradeInfo } from '@/lib/constants/disability-data';
+import { CURRENT_STANDARDS } from '@/lib/constants/compensation-standards';
+import {
+  DISABILITY_TABLE,
+  DisabilityGrade,
+  DisabilityType,
+  getGradeInfo,
+} from '@/lib/constants/disability-data';
 
 // ── 입력 ──────────────────────────────────────────────────────
 
-export interface DisabilityPayInput {
-  /** 평균임금 산정 방식 */
-  averageWageMethod: 'direct' | 'calculate';
-  /** 방식1: 1일 평균임금 직접 입력 */
-  dailyAverageWage?: number;
-  /** 방식2: 최근 3개월 임금 총액 */
-  totalWage3Months?: number;
-  /** 방식2: 최근 3개월 총 일수 (기본 90일) */
-  totalDays3Months?: number;
-  /** 장해등급 (1~14급) */
-  grade: DisabilityGrade;
+export interface DisabilityInput {
+  /** 1일 평균임금 (원) */
+  dailyAvgWage: number;
+  /** 장해등급 1~14 */
+  grade: number;
+  /** 4~7급에서 선택한 수령 방식 (선택 안 하면 둘 다 계산) */
+  paymentType?: 'pension' | 'lump-sum';
 }
 
 // ── 출력 ──────────────────────────────────────────────────────
 
-export interface DisabilityPayResult {
-  /** 산정된 1일 평균임금 */
-  dailyAverageWage: number;
+export interface DisabilityResult {
+  /** 보정 후 적용 평균임금 */
+  appliedWage: number;
+  /** 원래 입력 평균임금 */
+  originalWage: number;
+  /** 최저/최고 기준 보정 여부 */
+  wageAdjusted: boolean;
+  /** 보정 방향 */
+  adjustmentType?: 'min' | 'max';
 
-  /** 장해등급 */
-  grade: DisabilityGrade;
-  /** 지급 방식 */
+  grade: number;
   gradeType: DisabilityType;
-  /** 일시금 보상일수 */
-  lumpSumDays: number;
-  /** 연금 지급일수 (8~14급은 null) */
-  pensionDays: number | null;
-  /** 노동력 상실률 */
+  /** 노동력 상실률 (%) */
   lossRate: number;
 
-  // ─ 일시금 ─
-  /** 일시금 총액 */
-  lumpSumAmount: number;
+  /** 일시금 (4~14급) */
+  lumpSum?: {
+    days: number;
+    amount: number;
+  };
 
-  // ─ 연금 (1~7급) ─
-  /** 연간 연금액 */
-  annualPension: number | null;
-  /** 월 연금액 (연간 ÷ 12) */
-  monthlyPension: number | null;
+  /** 연금 (1~7급) */
+  pension?: {
+    daysPerYear: number;
+    annualAmount: number;
+    monthlyAmount: number;
+  };
 
-  // ─ 4~7급 선택 시 참고 ─
-  /** 일부연금 선택 시: 선급 일시금 (일시금의 50%) */
-  partialLumpSum: number | null;
-  /** 일부연금 선택 시: 잔여 연금 (연간 기준) */
-  partialAnnualPension: number | null;
-  /** 일부연금 선택 시: 잔여 월 연금 */
-  partialMonthlyPension: number | null;
+  /** 4~7급 선택 비교용 */
+  comparison?: {
+    lumpSum: number;
+    annualPension: number;
+    /** 연금 수령 합계가 일시금을 넘어서는 연수 */
+    breakEvenYears: number;
+  };
 }
 
 // ── 계산 ──────────────────────────────────────────────────────
 
-export function calculateDisabilityPay(input: DisabilityPayInput): DisabilityPayResult {
-  // 1. 평균임금 산정
-  let dailyAvgWage: number;
-  if (input.averageWageMethod === 'direct') {
-    dailyAvgWage = input.dailyAverageWage!;
-  } else {
-    dailyAvgWage = Math.round(
-      input.totalWage3Months! / (input.totalDays3Months ?? 90)
-    );
+export function calculateDisability(input: DisabilityInput): DisabilityResult {
+  const S = CURRENT_STANDARDS;
+
+  // 1. 평균임금 보정 (최저·최고 보상기준금액)
+  const originalWage = input.dailyAvgWage;
+  let appliedWage = originalWage;
+  let wageAdjusted = false;
+  let adjustmentType: 'min' | 'max' | undefined;
+
+  if (originalWage < S.minDailyBase) {
+    appliedWage = S.minDailyBase;
+    wageAdjusted = true;
+    adjustmentType = 'min';
+  } else if (originalWage > S.maxDailyBase) {
+    appliedWage = S.maxDailyBase;
+    wageAdjusted = true;
+    adjustmentType = 'max';
   }
 
-  // 2. 등급 정보 조회
-  const info = getGradeInfo(input.grade);
-  const { pensionDays, lumpSumDays, type, lossRate } = info;
+  // 2. 등급별 보상일수 조회
+  const info = getGradeInfo(input.grade as DisabilityGrade);
+  const { pensionDays, lumpSumDays, type: gradeType, lossRate } = info;
 
-  // 3. 일시금 계산
-  const lumpSumAmount = Math.round(dailyAvgWage * lumpSumDays);
+  // 3. 지급 유형에 따른 금액 계산
+  let lumpSum: DisabilityResult['lumpSum'];
+  let pension: DisabilityResult['pension'];
 
-  // 4. 연금 계산 (1~7급)
-  let annualPension: number | null = null;
-  let monthlyPension: number | null = null;
+  // 연금 계산 — 1~7급
   if (pensionDays !== null) {
-    annualPension  = Math.round(dailyAvgWage * pensionDays);
-    monthlyPension = Math.round(annualPension / 12);
+    const annualAmount = Math.round(appliedWage * pensionDays);
+    pension = {
+      daysPerYear: pensionDays,
+      annualAmount,
+      monthlyAmount: Math.round(annualAmount / 12),
+    };
   }
 
-  // 5. 일부연금 참고값 계산 (4~7급 choice)
-  let partialLumpSum: number | null = null;
-  let partialAnnualPension: number | null = null;
-  let partialMonthlyPension: number | null = null;
-  if (type === 'choice' && annualPension !== null) {
-    // 일부연금: 일시금의 50%를 선급받고, 남은 연금은 50% 수령
-    partialLumpSum         = Math.round(lumpSumAmount * 0.5);
-    partialAnnualPension   = Math.round(annualPension * 0.5);
-    partialMonthlyPension  = Math.round(partialAnnualPension / 12);
+  // 일시금 계산 — 4~14급 (choice + lump-sum-only)
+  if (gradeType === 'choice' || gradeType === 'lump-sum-only') {
+    lumpSum = {
+      days: lumpSumDays,
+      amount: Math.round(appliedWage * lumpSumDays),
+    };
+  }
+
+  // 4. 4~7급 비교 데이터 (손익분기점)
+  let comparison: DisabilityResult['comparison'];
+  if (gradeType === 'choice' && pension && lumpSum) {
+    comparison = {
+      lumpSum:       lumpSum.amount,
+      annualPension: pension.annualAmount,
+      breakEvenYears: parseFloat(
+        (lumpSum.amount / pension.annualAmount).toFixed(1)
+      ),
+    };
   }
 
   return {
-    dailyAverageWage: dailyAvgWage,
+    appliedWage,
+    originalWage,
+    wageAdjusted,
+    adjustmentType,
     grade: input.grade,
-    gradeType: type,
-    lumpSumDays,
-    pensionDays: pensionDays ?? null,
+    gradeType,
     lossRate,
-    lumpSumAmount,
-    annualPension,
-    monthlyPension,
-    partialLumpSum,
-    partialAnnualPension,
-    partialMonthlyPension,
+    lumpSum,
+    pension,
+    comparison,
   };
 }

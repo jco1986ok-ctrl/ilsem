@@ -1,22 +1,28 @@
-// 2026년 기준 (매년 1월 업데이트 필요)
-// 근거: 고용노동부 고시 제2025-84호 (2026.1.1 시행)
+/**
+ * 산재 휴업급여 계산 상수 (산재보험법 제52조)
+ * 최저·최고 보상기준금액은 compensation-standards.ts 에서 가져옵니다.
+ */
+import { CURRENT_STANDARDS } from '@/lib/constants/compensation-standards';
+
+const S = CURRENT_STANDARDS;
+
 export const SICK_LEAVE_PAY_CONSTANTS = {
-  year: 2026,
+  year: S.year,
 
-  // 2026년 최저임금 (고용노동부 고시, 2026.1.1 시행)
-  minimumWageHourly: 10320,          // 시급
-  minimumWageDaily: 82560,           // 10,320 × 8시간
+  // ── 최저임금 ──────────────────────────────────────────────
+  minimumWageHourly: S.minHourlyWage,
+  minimumWageDaily:  S.minDailyBase,   // minHourlyWage × 8h
 
-  // 2026년 최저·최고 보상기준금액 (고용노동부 고시 제2025-84호)
-  minCompensationDaily: 82560,       // 1일 최저보상기준금액
-  maxCompensationDaily: 268299,      // 1일 최고보상기준금액
+  // ── 보상기준금액 ───────────────────────────────────────────
+  minCompensationDaily: S.minDailyBase,
+  maxCompensationDaily: S.maxDailyBase,
 
-  // 지급률 (법령 변경 없음)
-  standardRate: 0.70,
-  lowIncomeRate: 0.90,
+  // ── 지급률 (법령 변경 없음) ───────────────────────────────
+  standardRate:       0.70,
+  lowIncomeRate:      0.90,
   minCompensationRate: 0.80,
 
-  // 고령자 감액 기준 (산업재해보상보험법 별표1, 변경 없음)
+  // ── 고령자 감액 기준 (산재보험법 별표1, 변경 없음) ─────────
   elderlyReduction70: {
     61: { numerator: 66, denominator: 70 },
     62: { numerator: 62, denominator: 70 },

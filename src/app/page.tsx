@@ -30,7 +30,7 @@ const industrialCalcs = [
     emoji: '🏥',
     title: '휴업급여 계산기',
     desc: '산재로 쉬는 동안 받을 수 있는 금액 (평균임금의 70%)',
-    href: '/calc/injury-leave-pay',
+    href: '/calc/sick-leave-pay',
     badge: '인기',
   },
   {

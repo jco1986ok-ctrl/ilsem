@@ -16,10 +16,14 @@ export default function ReportPage() {
     <div className="max-w-2xl mx-auto py-8 px-4">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-[#1E293B] mb-1">종합 리포트</h1>
-        <p className="text-slate-500 text-sm">산재 보상 또는 퇴직 정산 항목을 한 번에 계산합니다</p>
+        <p className="text-slate-500 text-sm">
+          산재 보상 또는 퇴직 정산 항목을 한 번에 계산합니다
+        </p>
         <div className="flex flex-wrap gap-2 mt-3">
           {['산재 보상 종합', '퇴직 정산 종합', '항목별 상세 내역', '2025~2026 기준'].map(tag => (
-            <span key={tag} className="text-xs bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full">{tag}</span>
+            <span key={tag} className="text-xs bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full">
+              {tag}
+            </span>
           ))}
         </div>
       </div>

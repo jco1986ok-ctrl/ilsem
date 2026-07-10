@@ -1,410 +1,547 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import {
   calcInjuryReport,
   calcRetireReport,
   type InjuryInput,
   type RetireInput,
-  type ReportLine,
   type InjuryResult,
   type RetireResult,
+  type ReportLine,
 } from '@/lib/calc/report';
-import { useNumberFormat } from '@/hooks/useNumberFormat';
-import { formatWon } from '@/lib/helpers';
 
-// ── 보조 ─────────────────────────────────────
-
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">{children}</p>
-  );
+/* ── 포맷 헬퍼 ─────────────────────────────── */
+function fmt(n: number): string {
+  return n.toLocaleString('ko-KR');
+}
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+/* ── 광고 슬롯 ─────────────────────────────── */
+function AdSlot({ id, label }: { id: string; label: string }) {
   return (
-    <div>
-      <label className="block text-sm font-semibold text-slate-700 mb-1.5">{label}</label>
-      {children}
-      {hint && <p className="text-xs text-slate-400 mt-1">{hint}</p>}
+    <div id={`ad-slot-${id}`}
+      className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center text-sm text-gray-400 my-6 print:hidden">
+      <span className="block text-xs">📢 광고 영역</span>
+      <span>{label}</span>
     </div>
   );
 }
 
-function DateInput({ value, onChange, min, max }: {
-  value: string; onChange: (v: string) => void; min?: string; max?: string;
+/* ── 결과 테이블 ────────────────────────────── */
+function ResultTable({ lines, grandTotal, title }: {
+  lines: ReportLine[]; grandTotal: number; title: string;
 }) {
   return (
-    <input type="date" value={value} min={min} max={max}
-      onChange={e => onChange(e.target.value)}
-      className="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-[#1E293B] font-medium outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 text-sm" />
-  );
-}
-
-function MoneyInput({ hook, placeholder }: { hook: ReturnType<typeof useNumberFormat>; placeholder?: string }) {
-  return (
-    <div className="relative">
-      <input type="text" inputMode="numeric"
-        value={hook.displayValue} onChange={hook.onChange}
-        placeholder={placeholder ?? '0'}
-        className="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-right pr-10 text-[#1E293B] font-medium outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 text-sm" />
-      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none">원</span>
-    </div>
-  );
-}
-
-function WageRow({ n, hook }: { n: number; hook: ReturnType<typeof useNumberFormat> }) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-slate-400 shrink-0 w-16">{n}번째 달</span>
-      <MoneyInput hook={hook} placeholder="예: 3,000,000" />
-    </div>
-  );
-}
-
-function ResultCard({ line, isPension }: { line: ReportLine; isPension?: boolean }) {
-  return (
-    <div className={`rounded-xl border px-4 py-3 ${
-      isPension ? 'bg-purple-50 border-purple-200' : 'bg-white border-slate-200'
-    }`}>
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-slate-700">{line.label}</span>
-        <span className={`tabular-nums font-bold text-sm ${
-          line.amount === 0 ? 'text-slate-400' : isPension ? 'text-purple-700' : 'text-[#2563EB]'
-        }`}>
-          {line.amount > 0 ? formatWon(line.amount) : '—'}
-        </span>
+    <div className="border rounded-lg overflow-hidden">
+      <div className="bg-gray-100 px-4 py-3">
+        <h3 className="font-bold">{title}</h3>
       </div>
-      <p className="text-xs text-slate-400 mt-1">{line.note}</p>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b bg-gray-50">
+            <th className="text-left py-2 px-4">항목</th>
+            <th className="text-right py-2 px-4">금액</th>
+            <th className="text-left py-2 px-4 hidden sm:table-cell">산정 근거</th>
+          </tr>
+        </thead>
+        <tbody>
+          {lines.map((line, i) => (
+            <tr key={i} className="border-b">
+              <td className="py-3 px-4 font-medium">{line.label}</td>
+              <td className="py-3 px-4 text-right font-semibold whitespace-nowrap">
+                {line.amount > 0 ? `${fmt(line.amount)}원` : '—'}
+              </td>
+              <td className="py-3 px-4 text-xs text-gray-500 hidden sm:table-cell">{line.note}</td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr className="bg-blue-50">
+            <td className="py-3 px-4 font-bold">합계</td>
+            <td className="py-3 px-4 text-right font-bold text-blue-700 text-lg whitespace-nowrap">{fmt(grandTotal)}원</td>
+            <td className="py-3 px-4 hidden sm:table-cell" />
+          </tr>
+        </tfoot>
+      </table>
+      {/* 모바일 산정근거 */}
+      <div className="sm:hidden px-4 pb-3 space-y-2">
+        {lines.map((line, i) => (
+          <div key={i} className="text-xs text-gray-500">
+            <span className="font-medium text-gray-700">{line.label}:</span> {line.note}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
-// ── 메인 ─────────────────────────────────────
+/* ── 입력 필드 ─────────────────────────────── */
+function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
+  return (
+    <div>
+      <label className="block text-sm font-semibold mb-1">{label}</label>
+      {children}
+      {hint && <p className="text-xs text-gray-500 mt-1">{hint}</p>}
+    </div>
+  );
+}
 
-type Mode = 'injury' | 'retire';
+function MoneyInput({ value, onChange, placeholder }: {
+  value: string; onChange: (v: string) => void; placeholder?: string;
+}) {
+  function handle(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.value.replace(/[^0-9]/g, '');
+    if (raw === '') { onChange(''); return; }
+    onChange(Number(raw).toLocaleString('ko-KR'));
+  }
+  return (
+    <input type="text" inputMode="numeric"
+      className="w-full border rounded px-3 py-2" placeholder={placeholder ?? '0'}
+      value={value} onChange={handle} />
+  );
+}
 
-const iCls = 'w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-[#1E293B] font-medium outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 text-sm bg-white';
+function parseNum(s: string): number {
+  return parseInt(s.replace(/,/g, ''), 10) || 0;
+}
 
+/* ── 메인 컴포넌트 ───────────────────────────── */
 export default function ReportCalculator() {
-  const [mode, setMode] = useState<Mode>('injury');
+  const [mode, setMode]     = useState<'injury' | 'retire'>('injury');
+  const [calculated, setCal] = useState(false);
 
-  // ── 산재 모드 상태 ──────────────────────────
+  // 공통 임금
+  const [wage1, setWage1] = useState('');
+  const [wage2, setWage2] = useState('');
+  const [wage3, setWage3] = useState('');
+  const [bonus, setBonus] = useState('');
 
-  const [injuryDate, setInjuryDate]         = useState('');
-  const [birthDate, setBirthDate]           = useState('');
-  const [healStart, setHealStart]           = useState('');
-  const [healEnd, setHealEnd]               = useState('');
-  const iw1 = useNumberFormat(0);
-  const iw2 = useNumberFormat(0);
-  const iw3 = useNumberFormat(0);
-  const iBonus = useNumberFormat(0);
-  const [disGrade, setDisGrade]             = useState<string>('none');
-  const [disType, setDisType]               = useState<'pension' | 'lump'>('lump');
-  const [isDead, setIsDead]                 = useState(false);
-  const [survivorCount, setSurvivorCount]   = useState(1);
+  // 산재 전용
+  const [birthDate, setBirthDate]         = useState('');
+  const [injuryDate, setInjuryDate]       = useState('');
+  const [healStart, setHealStart]         = useState('');
+  const [healEnd, setHealEnd]             = useState('');
+  const [disGrade, setDisGrade]           = useState('none');
+  const [disType, setDisType]             = useState<'pension' | 'lump'>('lump');
+  const [isDead, setIsDead]               = useState(false);
+  const [survivorCount, setSurvivorCount] = useState('1');
 
-  // ── 퇴직 모드 상태 ──────────────────────────
-
+  // 퇴직 전용
   const [hireDate, setHireDate]             = useState('');
   const [quitDate, setQuitDate]             = useState('');
-  const rw1 = useNumberFormat(0);
-  const rw2 = useNumberFormat(0);
-  const rw3 = useNumberFormat(0);
-  const rBonus = useNumberFormat(0);
-  const rLeave = useNumberFormat(0);
-  const rOrdinary = useNumberFormat(0);
+  const [leaveAllowance, setLeaveAllowance] = useState('');
+  const [dailyOrdinary, setDailyOrdinary]   = useState('');
   const [unusedLeave, setUnusedLeave]       = useState('');
-  const [wasFired, setWasFired]             = useState(false);
+  const [firedNoNotice, setFiredNoNotice]   = useState(false);
 
-  // ── 산재 계산 ──────────────────────────────
-
+  // 결과
   const injuryResult = useMemo<InjuryResult | null>(() => {
-    if (!injuryDate || !healStart || !healEnd || !birthDate) return null;
-    const w = iw1.numericValue + iw2.numericValue + iw3.numericValue;
-    if (w === 0) return null;
+    if (!calculated || mode !== 'injury') return null;
+    if (!wage1 || !injuryDate || !healStart || !healEnd) return null;
     const input: InjuryInput = {
-      monthlyWage1:    iw1.numericValue,
-      monthlyWage2:    iw2.numericValue,
-      monthlyWage3:    iw3.numericValue,
-      annualBonus:     iBonus.numericValue,
-      birthDate, injuryDate,
-      healStartDate:   healStart,
-      healEndDate:     healEnd,
-      disabilityGrade: disGrade === 'none' ? null : Number(disGrade),
+      monthlyWage1:    parseNum(wage1),
+      monthlyWage2:    parseNum(wage2) || parseNum(wage1),
+      monthlyWage3:    parseNum(wage3) || parseNum(wage1),
+      annualBonus:     parseNum(bonus),
+      birthDate:       birthDate || '1970-01-01',
+      injuryDate, healStartDate: healStart, healEndDate: healEnd,
+      disabilityGrade: disGrade === 'none' ? null : parseInt(disGrade, 10),
       disabilityType:  disGrade === 'none' ? null : disType,
       isDead,
-      survivorCount,
+      survivorCount:   parseInt(survivorCount, 10) || 0,
     };
-    try { return calcInjuryReport(input); }
-    catch { return null; }
-  }, [injuryDate, birthDate, healStart, healEnd,
-      iw1.numericValue, iw2.numericValue, iw3.numericValue, iBonus.numericValue,
-      disGrade, disType, isDead, survivorCount]);
-
-  // ── 퇴직 계산 ──────────────────────────────
+    return calcInjuryReport(input);
+  }, [calculated, mode, wage1, wage2, wage3, bonus, birthDate,
+      injuryDate, healStart, healEnd, disGrade, disType, isDead, survivorCount]);
 
   const retireResult = useMemo<RetireResult | null>(() => {
-    if (!hireDate || !quitDate) return null;
-    const w = rw1.numericValue + rw2.numericValue + rw3.numericValue;
-    if (w === 0) return null;
+    if (!calculated || mode !== 'retire') return null;
+    if (!wage1 || !hireDate || !quitDate) return null;
     const input: RetireInput = {
       hireDate, quitDate,
-      monthlyWage1:         rw1.numericValue,
-      monthlyWage2:         rw2.numericValue,
-      monthlyWage3:         rw3.numericValue,
-      annualBonus:          rBonus.numericValue,
-      annualLeaveAllowance: rLeave.numericValue,
-      dailyOrdinaryWage:    rOrdinary.numericValue,
-      unusedLeaveDays:      parseInt(unusedLeave) || 0,
-      wasFiredWithoutNotice: wasFired,
+      monthlyWage1:         parseNum(wage1),
+      monthlyWage2:         parseNum(wage2) || parseNum(wage1),
+      monthlyWage3:         parseNum(wage3) || parseNum(wage1),
+      annualBonus:          parseNum(bonus),
+      annualLeaveAllowance: parseNum(leaveAllowance),
+      dailyOrdinaryWage:    parseNum(dailyOrdinary),
+      unusedLeaveDays:      parseInt(unusedLeave, 10) || 0,
+      wasFiredWithoutNotice: firedNoNotice,
     };
-    try { return calcRetireReport(input); }
-    catch { return null; }
-  }, [hireDate, quitDate,
-      rw1.numericValue, rw2.numericValue, rw3.numericValue,
-      rBonus.numericValue, rLeave.numericValue, rOrdinary.numericValue,
-      unusedLeave, wasFired]);
+    return calcRetireReport(input);
+  }, [calculated, mode, wage1, wage2, wage3, bonus, hireDate, quitDate,
+      leaveAllowance, dailyOrdinary, unusedLeave, firedNoNotice]);
 
-  const activeResult = mode === 'injury' ? injuryResult : retireResult;
+  const result = mode === 'injury' ? injuryResult : retireResult;
 
-  // ── 렌더 ──────────────────────────────────
+  // PDF 저장
+  const reportRef = useRef<HTMLDivElement>(null);
+  const handlePDF = useCallback(async () => {
+    if (!reportRef.current) return;
+    const html2canvas = (await import('html2canvas')).default;
+    const { jsPDF }   = await import('jspdf');
+    const canvas  = await html2canvas(reportRef.current, { scale: 2, useCORS: true });
+    const imgData = canvas.toDataURL('image/png');
+    const pdf     = new jsPDF('p', 'mm', 'a4');
+    const pdfW    = pdf.internal.pageSize.getWidth();
+    const pdfH    = (canvas.height * pdfW) / canvas.width;
+    const pageH   = pdf.internal.pageSize.getHeight();
+
+    if (pdfH <= pageH) {
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH);
+    } else {
+      let remaining = pdfH;
+      let position  = 0;
+      while (remaining > 0) {
+        pdf.addImage(imgData, 'PNG', 0, position, pdfW, pdfH);
+        remaining -= pageH;
+        position  -= pageH;
+        if (remaining > 0) pdf.addPage();
+      }
+    }
+    const fileName = mode === 'injury'
+      ? `일셈_산재보상_종합리포트_${todayStr()}.pdf`
+      : `일셈_퇴직정산_종합리포트_${todayStr()}.pdf`;
+    pdf.save(fileName);
+  }, [mode]);
+
+  function handleCalc() {
+    setCal(false);
+    setTimeout(() => setCal(true), 0);
+  }
+
+  const dateCls = 'w-full border rounded px-3 py-2';
+  const selCls  = 'w-full border rounded px-3 py-2 bg-white';
 
   return (
-    <div className="space-y-6">
-      {/* 모드 탭 */}
-      <div className="flex rounded-xl border border-slate-200 overflow-hidden">
+    <div className="space-y-8">
+
+      {/* 모드 선택 */}
+      <div className="flex gap-3">
         {(['injury', 'retire'] as const).map(m => (
-          <button key={m} type="button" onClick={() => setMode(m)}
-            className={`flex-1 py-3 text-sm font-semibold transition-colors ${
-              mode === m ? 'bg-[#2563EB] text-white' : 'text-slate-500 hover:bg-slate-50'
+          <button key={m} type="button"
+            onClick={() => { setMode(m); setCal(false); }}
+            className={`flex-1 py-3 rounded-lg border-2 font-semibold transition-all ${
+              mode === m
+                ? m === 'injury' ? 'bg-red-50 border-red-300 text-red-700' : 'bg-blue-50 border-blue-300 text-blue-700'
+                : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
             }`}>
-            {m === 'injury' ? '🚑 산재 보상 종합' : '📦 퇴직 정산 종합'}
+            {m === 'injury' ? '🚑 산재 보상' : '📦 퇴직 정산'}
           </button>
         ))}
       </div>
 
-      {/* ── 산재 입력 ── */}
-      {mode === 'injury' && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+      {/* 입력 폼 */}
+      <div className="bg-white border rounded-lg p-6 space-y-5">
+        <h2 className="font-bold text-lg">
+          {mode === 'injury' ? '🚑 산재 보상 정보 입력' : '📦 퇴직 정산 정보 입력'}
+        </h2>
 
-          {/* 날짜 */}
-          <div>
-            <SectionTitle>기본 정보</SectionTitle>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="재해일" hint="업무상 재해가 발생한 날">
-                <DateInput value={injuryDate} onChange={setInjuryDate} />
+        {/* 공통: 급여 */}
+        <div className="bg-gray-50 rounded-lg p-4 space-y-4">
+          <p className="text-sm font-semibold text-gray-700">
+            💰 {mode === 'injury' ? '재해일' : '퇴직일'} 이전 3개월 급여
+          </p>
+          <p className="text-xs text-gray-500">
+            매월 동일한 급여라면 첫 번째 달만 입력하세요. 나머지는 자동 적용됩니다.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Field label="1번째 달 임금">
+              <MoneyInput value={wage1} onChange={setWage1} placeholder="3,000,000" />
+            </Field>
+            <Field label="2번째 달 임금" hint="비워두면 1번째 달과 동일">
+              <MoneyInput value={wage2} onChange={setWage2} />
+            </Field>
+            <Field label="3번째 달 임금" hint="비워두면 1번째 달과 동일">
+              <MoneyInput value={wage3} onChange={setWage3} />
+            </Field>
+          </div>
+          <Field label="연간 상여금 총액" hint="없으면 0">
+            <MoneyInput value={bonus} onChange={setBonus} />
+          </Field>
+        </div>
+
+        {/* 산재 전용 */}
+        {mode === 'injury' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="생년월일" hint="고령자 감액 판단용">
+                <input type="date" className={dateCls} value={birthDate} onChange={e => setBirthDate(e.target.value)} />
               </Field>
-              <Field label="생년월일" hint="고령자 감액 계산에 사용">
-                <DateInput value={birthDate} onChange={setBirthDate} />
+              <Field label="재해일 (사고 발생일)">
+                <input type="date" className={dateCls} value={injuryDate} onChange={e => setInjuryDate(e.target.value)} />
               </Field>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label="요양 시작일">
-                <DateInput value={healStart} onChange={setHealStart} />
+                <input type="date" className={dateCls} value={healStart} onChange={e => setHealStart(e.target.value)} />
               </Field>
-              <Field label="요양 종료일(예상)">
-                <DateInput value={healEnd} onChange={setHealEnd} />
+              <Field label="요양 종료일 (예상)">
+                <input type="date" className={dateCls} value={healEnd} onChange={e => setHealEnd(e.target.value)} />
               </Field>
             </div>
-          </div>
-
-          {/* 임금 */}
-          <div>
-            <SectionTitle>재해일 이전 3개월 임금</SectionTitle>
-            <div className="space-y-2">
-              <WageRow n={1} hook={iw1} />
-              <WageRow n={2} hook={iw2} />
-              <WageRow n={3} hook={iw3} />
-            </div>
-            <div className="mt-3">
-              <p className="text-xs text-slate-500 mb-1">연간 상여금 총액</p>
-              <MoneyInput hook={iBonus} placeholder="예: 4,000,000" />
-            </div>
-          </div>
-
-          {/* 장해 */}
-          <div>
-            <SectionTitle>장해 정보 (선택)</SectionTitle>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="장해등급">
-                <select value={disGrade} onChange={e => setDisGrade(e.target.value)} className={iCls}>
-                  <option value="none">미정 / 해당 없음</option>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="장해등급" hint="미정이면 '아직 모름' 선택">
+                <select className={selCls} value={disGrade} onChange={e => setDisGrade(e.target.value)}>
+                  <option value="none">아직 모름</option>
                   {Array.from({ length: 14 }, (_, i) => i + 1).map(g => (
                     <option key={g} value={g}>{g}급</option>
                   ))}
                 </select>
               </Field>
-              {disGrade !== 'none' && Number(disGrade) <= 7 && (
-                <Field label="지급 방식">
-                  <select value={disType} onChange={e => setDisType(e.target.value as 'pension' | 'lump')} className={iCls}>
-                    <option value="lump">일시금</option>
+              {disGrade !== 'none' && parseInt(disGrade) <= 7 && (
+                <Field label="장해급여 수령 방식">
+                  <select className={selCls} value={disType}
+                    onChange={e => setDisType(e.target.value as 'pension' | 'lump')}>
                     <option value="pension">연금</option>
+                    <option value="lump">일시금</option>
+                  </select>
+                </Field>
+              )}
+            </div>
+            <div className="border-t pt-4 space-y-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={isDead} onChange={e => setIsDead(e.target.checked)} />
+                <span className="text-sm font-medium">업무상 재해로 사망한 경우</span>
+              </label>
+              {isDead && (
+                <Field label="유족 수급자격자 수" hint="배우자, 자녀, 부모 등">
+                  <select className={selCls} value={survivorCount} onChange={e => setSurvivorCount(e.target.value)}>
+                    {[1, 2, 3, 4].map(n => (
+                      <option key={n} value={n}>{n}인</option>
+                    ))}
                   </select>
                 </Field>
               )}
             </div>
           </div>
+        )}
 
-          {/* 사망 */}
-          <div>
-            <SectionTitle>사망 시 유족급여 (선택)</SectionTitle>
-            <label className="flex items-center gap-2 cursor-pointer mb-3">
-              <input type="checkbox" checked={isDead} onChange={e => setIsDead(e.target.checked)}
-                className="w-4 h-4 accent-blue-600" />
-              <span className="text-sm text-slate-700 font-medium">사망 사고 발생</span>
-            </label>
-            {isDead && (
-              <Field label="수급자격자 수" hint="배우자, 자녀 등 유족보상연금 수급 자격이 있는 인원">
-                <select value={survivorCount} onChange={e => setSurvivorCount(Number(e.target.value))} className={iCls}>
-                  {[1, 2, 3, 4].map(n => (
-                    <option key={n} value={n}>{n}인 이상{n === 4 ? ' (최대)' : ''}</option>
-                  ))}
-                </select>
-              </Field>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── 퇴직 입력 ── */}
-      {mode === 'retire' && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
-
-          {/* 날짜 */}
-          <div>
-            <SectionTitle>재직 기간</SectionTitle>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* 퇴직 전용 */}
+        {mode === 'retire' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label="입사일">
-                <DateInput value={hireDate} onChange={setHireDate} />
+                <input type="date" className={dateCls} value={hireDate} onChange={e => setHireDate(e.target.value)} />
               </Field>
               <Field label="퇴직일" hint="마지막 근무일의 다음 날">
-                <DateInput value={quitDate} onChange={setQuitDate} />
+                <input type="date" className={dateCls} value={quitDate} onChange={e => setQuitDate(e.target.value)} />
               </Field>
             </div>
-            {hireDate && quitDate && new Date(quitDate) > new Date(hireDate) && (
-              <div className="mt-3 bg-slate-50 rounded-xl px-4 py-2.5 flex items-center justify-between text-sm">
-                <span className="text-slate-500">재직일수</span>
-                <span className="font-bold text-[#1E293B]">
-                  {Math.round((new Date(quitDate).getTime() - new Date(hireDate).getTime()) / 86_400_000).toLocaleString()}일
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* 임금 */}
-          <div>
-            <SectionTitle>퇴직 전 3개월 임금</SectionTitle>
-            <div className="space-y-2">
-              <WageRow n={1} hook={rw1} />
-              <WageRow n={2} hook={rw2} />
-              <WageRow n={3} hook={rw3} />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-              <div>
-                <p className="text-xs text-slate-500 mb-1">연간 상여금 총액</p>
-                <MoneyInput hook={rBonus} placeholder="예: 4,000,000" />
-              </div>
-              <div>
-                <p className="text-xs text-slate-500 mb-1">연차수당 (연간)</p>
-                <MoneyInput hook={rLeave} placeholder="예: 500,000" />
-              </div>
-            </div>
-          </div>
-
-          {/* 통상임금·연차 */}
-          <div>
-            <SectionTitle>통상임금 · 연차 · 해고 정보</SectionTitle>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="1일 통상임금" hint="평균임금보다 높은 경우 자동 적용">
-                <MoneyInput hook={rOrdinary} placeholder="예: 96,000" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="연간 연차수당 (작년 기준)" hint="없으면 0">
+                <MoneyInput value={leaveAllowance} onChange={setLeaveAllowance} />
               </Field>
-              <Field label="미사용 연차일수">
-                <div className="relative">
-                  <input type="number" min={0} max={25} value={unusedLeave}
-                    onChange={e => setUnusedLeave(e.target.value)}
-                    placeholder="예: 10"
-                    className="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-right pr-10 text-[#1E293B] font-medium outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100 text-sm" />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none">일</span>
-                </div>
+              <Field label="1일 통상임금" hint="연차수당·해고예고수당 산정 기준">
+                <MoneyInput value={dailyOrdinary} onChange={setDailyOrdinary} />
               </Field>
             </div>
-            <label className="flex items-center gap-2 cursor-pointer mt-3">
-              <input type="checkbox" checked={wasFired} onChange={e => setWasFired(e.target.checked)}
-                className="w-4 h-4 accent-blue-600" />
-              <span className="text-sm text-slate-700">해고예고 없이 즉시 해고 (해고예고수당 30일분 산정)</span>
+            <Field label="미사용 연차일수" hint="퇴직 시 남은 연차">
+              <input type="number" min="0" className="w-full border rounded px-3 py-2"
+                value={unusedLeave} onChange={e => setUnusedLeave(e.target.value)} placeholder="0" />
+            </Field>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={firedNoNotice} onChange={e => setFiredNoNotice(e.target.checked)} />
+              <span className="text-sm font-medium">해고예고 없이 즉시 해고됨</span>
             </label>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* ── 결과 ── */}
-      {activeResult && (
-        <div className="space-y-5">
-          {/* 평균임금 */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl px-5 py-4 grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-slate-400 text-xs mb-0.5">1일 평균임금</p>
-              <p className="font-bold text-[#1E293B] tabular-nums text-base">
-                {(activeResult as InjuryResult | RetireResult).dailyAvgWage.toLocaleString()}원
-              </p>
+        <button onClick={handleCalc}
+          className="w-full py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors text-lg">
+          📊 종합 계산하기
+        </button>
+      </div>
+
+      {/* 광고 슬롯 1 */}
+      <AdSlot id="1" label="산재 전문 노무법인 · 무료 상담 안내" />
+
+      {/* 결과 영역 */}
+      {result && (
+        <div ref={reportRef}>
+          <div className="space-y-6">
+
+            {/* 리포트 헤더 */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-xl p-6">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-xl font-bold">
+                    {mode === 'injury' ? '🚑 산재 보상 종합 리포트' : '📦 퇴직 정산 종합 리포트'}
+                  </h2>
+                  <p className="text-blue-100 text-sm mt-1">일셈 · {todayStr()} 산정</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-blue-200 text-xs">예상 총액</p>
+                  <p className="text-3xl font-bold">{fmt(result.grandTotal)}원</p>
+                </div>
+              </div>
             </div>
-            {mode === 'injury' && (
+
+            {/* 기본 정보 요약 */}
+            <div className="bg-gray-50 rounded-lg p-4 text-sm grid grid-cols-2 sm:grid-cols-3 gap-3">
               <div>
-                <p className="text-slate-400 text-xs mb-0.5">총 요양일수</p>
-                <p className="font-bold text-[#1E293B] tabular-nums text-base">
-                  {(activeResult as InjuryResult).totalHealDays.toLocaleString()}일
-                </p>
+                <span className="text-gray-500">1일 평균임금</span>
+                <p className="font-bold">{fmt(result.dailyAvgWage)}원</p>
+              </div>
+              {mode === 'injury' && injuryResult && (
+                <>
+                  <div>
+                    <span className="text-gray-500">총 요양일수</span>
+                    <p className="font-bold">{injuryResult.totalHealDays}일</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">재해일</span>
+                    <p className="font-bold">{injuryDate}</p>
+                  </div>
+                </>
+              )}
+              {mode === 'retire' && retireResult && (
+                <>
+                  <div>
+                    <span className="text-gray-500">총 재직일수</span>
+                    <p className="font-bold">{retireResult.totalServiceDays}일</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">재직기간</span>
+                    <p className="font-bold">{hireDate} ~ {quitDate}</p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* 결과 테이블 */}
+            <ResultTable
+              lines={result.lines}
+              grandTotal={result.grandTotal}
+              title={mode === 'injury' ? '산재 보상금 내역' : '퇴직 정산 내역'}
+            />
+
+            {/* 참고사항 */}
+            {mode === 'injury' && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800 space-y-1.5">
+                <p className="font-semibold">📌 참고사항</p>
+                <p>• 요양급여(치료비)는 전액 별도 지원되며 이 금액에 포함되지 않습니다.</p>
+                <p>• 간병급여, 직업재활급여 등은 개인 상황에 따라 추가 지급될 수 있습니다.</p>
+                <p>• 회사의 과실이 있는 경우 민사 손해배상을 별도로 청구할 수 있습니다.</p>
+                <p>• 장해급여가 연금인 경우, 표시 금액은 <strong>연간 금액</strong>입니다.</p>
+                <p>• 유족보상연금과 유족보상일시금은 선택 관계이며, 동시 수령은 불가합니다.</p>
               </div>
             )}
             {mode === 'retire' && (
-              <div>
-                <p className="text-slate-400 text-xs mb-0.5">총 재직일수</p>
-                <p className="font-bold text-[#1E293B] tabular-nums text-base">
-                  {(activeResult as RetireResult).totalServiceDays.toLocaleString()}일
-                </p>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800 space-y-1.5">
+                <p className="font-semibold">📌 참고사항</p>
+                <p>• 퇴직금은 세전 금액이며, 퇴직소득세 원천징수 후 IRP 계좌로 지급됩니다.</p>
+                <p>• 연차사용촉진 절차가 적법하게 이행된 경우, 미사용 연차수당 지급 의무가 면제될 수 있습니다.</p>
+                <p>• 퇴직금은 퇴직일로부터 14일 이내에 지급되어야 합니다.</p>
               </div>
             )}
-          </div>
 
-          {/* 항목별 결과 */}
-          <div className="space-y-3">
-            {activeResult.lines.map((line, i) => (
-              <ResultCard
-                key={i}
-                line={line}
-                isPension={line.label.includes('연금') || line.label.includes('연간')}
-              />
-            ))}
-          </div>
-
-          {/* 합계 */}
-          <div className="bg-slate-800 rounded-2xl p-5 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-slate-400 mb-0.5">
-                {mode === 'injury' ? '산재 보상 합계' : '퇴직 정산 합계'}
-                {mode === 'injury' && injuryResult?.lines.some(l => l.label.includes('연금')) &&
-                  <span className="ml-1 text-slate-500">(연금 포함 시 연간 금액)</span>}
-              </p>
-              <p className="text-2xl font-bold text-white tabular-nums">
-                {formatWon(activeResult.grandTotal)}
-              </p>
+            {/* 면책 */}
+            <div className="text-xs text-gray-400 text-center py-2">
+              본 리포트는 일셈(ilsem.vercel.app)에서 {todayStr()} 기준으로 산정한 참고 자료이며, 법적 효력이 없습니다.
+              정확한 보상금 산정은 근로복지공단(☎ 1588-0075) 또는 전문 노무사와 상담하세요.
             </div>
-            {mode === 'injury' && (
-              <div className="text-right text-xs text-slate-400 max-w-[140px]">
-                연금 항목은 연간 금액 기준. 실제 수령 총액은 수령 기간에 따라 다릅니다.
-              </div>
-            )}
-          </div>
-
-          {/* 안내 */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-xs text-blue-700 flex items-start gap-2">
-            <span className="shrink-0">📌</span>
-            <span>
-              본 리포트는 참고용이며, 실제 수령액은 공단 심사 결과·근속일수 특례 등에 따라 달라질 수 있습니다.
-              정확한 산정은 근로복지공단(☎ 1588-0075) 또는 공인노무사에게 문의하세요.
-            </span>
           </div>
         </div>
       )}
+
+      {/* PDF 저장 + 상담 안내 */}
+      {result && (
+        <div className="space-y-4 print:hidden">
+          <button onClick={handlePDF}
+            className="w-full py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition-colors text-lg">
+            📄 PDF로 저장하기
+          </button>
+
+          <AdSlot id="2" label="IRP 계좌 개설 · 퇴직연금 비교" />
+
+          {/* 상담 준비 체크리스트 */}
+          <div className="bg-white border rounded-lg p-6">
+            <h3 className="font-bold mb-3">✅ 노무사 상담 시 함께 준비하면 좋은 서류</h3>
+            <div className="space-y-2 text-sm">
+              {[
+                '근로계약서 (또는 연봉계약서)',
+                '최근 3개월 급여명세서',
+                mode === 'injury' ? '진단서 / 소견서 (상병명 확인용)' : null,
+                mode === 'injury' ? '사고경위서 (작성한 경우)' : null,
+                mode === 'retire' ? '퇴직통지서 / 해고통보서 (해고된 경우)' : null,
+                mode === 'retire' ? '취업규칙 / 단체협약 (상여금·수당 규정 확인용)' : null,
+                '이 종합 리포트 PDF',
+              ].filter(Boolean).map((item, i) => (
+                <label key={i} className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" className="rounded" />
+                  <span>{item}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* 연락처 */}
+          <div className="bg-gray-50 rounded-lg p-6 space-y-3 text-sm">
+            <h3 className="font-bold">📞 도움이 필요하다면</h3>
+            {[
+              { icon: '🏛️', title: '근로복지공단 (산재보상)',  tel: '1588-0075' },
+              { icon: '📋', title: '고용노동부 (퇴직금·임금·해고)', tel: '1350' },
+            ].map(({ icon, title, tel }) => (
+              <div key={title} className="flex gap-3 items-start">
+                <span>{icon}</span>
+                <div>
+                  <p className="font-semibold">{title}</p>
+                  <p className="text-gray-600">☎ {tel}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <AdSlot id="3" label="산재 전문 노무사 · 무료 상담 신청" />
+        </div>
+      )}
+
+      {/* SEO 해설 */}
+      <article className="text-sm leading-7 text-slate-600 space-y-5 mt-8 border-t pt-8">
+        <section>
+          <h2 className="text-base font-bold text-[#1E293B] mb-2">종합 리포트란?</h2>
+          <p>
+            일셈 종합 리포트는 산재 보상금 또는 퇴직 정산금을 한 페이지에서 종합 계산하여
+            노무사 상담용 PDF로 저장할 수 있는 서비스입니다.
+            모든 계산은 브라우저에서 처리되며, 입력한 정보는 서버로 전송되지 않습니다.
+          </p>
+        </section>
+        <section>
+          <h2 className="text-base font-bold text-[#1E293B] mb-2">산재 보상 리포트에 포함되는 항목</h2>
+          <p>
+            휴업급여(평균임금의 70% × 요양일수), 장해급여(등급별 연금 또는 일시금),
+            사망 시 유족보상연금(또는 일시금)과 장의비가 포함됩니다.
+            요양급여(치료비)는 전액 별도 지원되므로 포함하지 않으며,
+            간병급여·직업재활급여·민사 손해배상 등은 개별 상황에 따라 추가됩니다.
+          </p>
+        </section>
+        <section>
+          <h2 className="text-base font-bold text-[#1E293B] mb-2">퇴직 정산 리포트에 포함되는 항목</h2>
+          <p>
+            퇴직금(1일 평균임금 × 30일 × 재직년수), 미사용 연차수당(1일 통상임금 × 잔여 연차일수),
+            해고예고수당(즉시해고 시 30일분 통상임금)이 포함됩니다.
+            퇴직금은 세전 금액이며, 실제 수령액은 퇴직소득세 공제 후 달라집니다.
+          </p>
+        </section>
+        <section>
+          <h2 className="text-base font-bold text-[#1E293B] mb-2">이 리포트의 활용 방법</h2>
+          <p>
+            계산 결과를 PDF로 저장한 뒤, 노무사 또는 근로복지공단 상담 시 제출하면
+            상담 시간을 절약하고 더 정확한 조언을 받을 수 있습니다.
+          </p>
+        </section>
+      </article>
+
+      <div className="text-sm text-gray-500 border-t pt-6 text-center">
+        <p>
+          본 리포트는 2025~2026년 기준 관련 법령을 기반으로 산정된 참고 자료이며,
+          법률 자문이 아닙니다. 정확한 판단은 전문 노무사 또는 관련 기관에 상담하세요.
+        </p>
+      </div>
     </div>
   );
 }

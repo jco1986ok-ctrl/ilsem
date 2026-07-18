@@ -6,6 +6,7 @@ import SanjaeDocuments5 from '@/components/blog/posts/SanjaeDocuments5';
 import SanjaeRejection4Steps from '@/components/blog/posts/SanjaeRejection4Steps';
 import MusculoskeletalDiscGuide from '@/components/blog/posts/MusculoskeletalDiscGuide';
 import PartTimeSanjaeGuide from '@/components/blog/posts/PartTimeSanjaeGuide';
+import DisabilityGradeGuide from '@/components/blog/posts/DisabilityGradeGuide';
 
 function getText(node: ReactNode): string {
   if (typeof node === 'string' || typeof node === 'number') return String(node);
@@ -147,4 +148,5 @@ export const mdxComponents = {
   SanjaeRejection4Steps,
   MusculoskeletalDiscGuide,
   PartTimeSanjaeGuide,
+  DisabilityGradeGuide,
 };

@@ -134,6 +134,35 @@
   padding: 40px 0;
 }
 
+.blog-info-panel {
+  background: #f8f8f8;
+  padding: 28px 32px;
+  margin: 32px 0;
+  border-radius: 12px;
+}
+
+.blog-info-panel p:first-child,
+.blog-info-panel > strong:first-child {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  color: #888;
+  letter-spacing: 1px;
+  margin: 0 0 16px;
+}
+
+.blog-info-panel ul {
+  margin: 0;
+  line-height: 2.3;
+}
+
+.blog-disclaimer {
+  text-align: center;
+  color: #bbb;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
 @media (max-width: 640px) {
   .blog-card {
     padding: 20px;

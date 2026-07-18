@@ -73,7 +73,6 @@ export default async function BlogPostPage({ params }: Props) {
           {!post.customLayout && (
             <header className="blog-post-header">
               <h1 className="blog-post-title">{post.title}</h1>
-              <p className="blog-post-meta">{post.readingMinutes}분 소요</p>
               {post.tags.length > 0 && (
                 <div className="blog-post-tags">
                   {post.tags.map((tag) => (

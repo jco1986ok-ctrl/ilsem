@@ -45,7 +45,7 @@ export default function PartTimeSanjaeGuide() {
           산재보상 받을 수 있을까?
         </h1>
         <p style={{ fontSize: 13, color: '#aaa', marginTop: 20 }}>
-          4분 읽기 &nbsp;·&nbsp; 일셈 편집부
+          일셈 편집부
         </p>
       </div>
 

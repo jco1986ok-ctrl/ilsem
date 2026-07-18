@@ -52,7 +52,7 @@ export default function SanjaeDocuments5() {
           이 5가지만 챙기면 끝
         </h1>
         <p style={{ fontSize: 13, color: '#aaa', marginTop: 20 }}>
-          4분 읽기 &nbsp;·&nbsp; 일셈 편집부
+          일셈 편집부
         </p>
       </div>
 

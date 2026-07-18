@@ -12,6 +12,11 @@ type Props = {
 export default function BlogPostList({ posts, tags }: Props) {
   const [activeTag, setActiveTag] = useState<string | null>(null);
 
+  const newestSlugs = useMemo(
+    () => new Set(posts.slice(0, 2).map((post) => post.slug)),
+    [posts]
+  );
+
   const filtered = useMemo(() => {
     if (!activeTag) return posts;
     return posts.filter((post) => post.tags.includes(activeTag));
@@ -45,24 +50,30 @@ export default function BlogPostList({ posts, tags }: Props) {
         <p className="blog-empty">해당 태그의 글이 없습니다.</p>
       ) : (
         <ul className="blog-card-list">
-          {filtered.map((post) => (
-            <li key={post.slug}>
-              <Link href={`/blog/${post.slug}`} className="blog-card">
-                <h2 className="blog-card-title">{post.title}</h2>
-                <p className="blog-card-meta">{post.readingMinutes}분 소요</p>
-                <p className="blog-card-desc">{post.description}</p>
-                {post.tags.length > 0 && (
-                  <div className="blog-card-tags">
-                    {post.tags.map((tag) => (
-                      <span key={tag} className="blog-tag">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </Link>
-            </li>
-          ))}
+          {filtered.map((post) => {
+            const isNew = newestSlugs.has(post.slug);
+
+            return (
+              <li key={post.slug}>
+                <Link href={`/blog/${post.slug}`} className="blog-card">
+                  <h2 className="blog-card-title">
+                    {isNew && <span className="blog-new-badge">NEW</span>}
+                    {post.title}
+                  </h2>
+                  <p className="blog-card-desc">{post.description}</p>
+                  {post.tags.length > 0 && (
+                    <div className="blog-card-tags">
+                      {post.tags.map((tag) => (
+                        <span key={tag} className="blog-tag">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

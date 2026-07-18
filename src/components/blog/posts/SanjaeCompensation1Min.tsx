@@ -35,7 +35,7 @@ export default function SanjaeCompensation1Min() {
           1분 만에 계산하는 법
         </h1>
         <p style={{ fontSize: 13, color: '#aaa', marginTop: 20 }}>
-          5분 읽기 &nbsp;·&nbsp; 일셈 편집부
+          일셈 편집부
         </p>
       </div>
 

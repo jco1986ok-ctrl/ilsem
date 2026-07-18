@@ -63,7 +63,7 @@ export default function SanjaeRejection4Steps() {
           대처법 4단계
         </h1>
         <p style={{ fontSize: 13, color: '#aaa', marginTop: 20 }}>
-          5분 읽기 &nbsp;·&nbsp; 일셈 편집부
+          일셈 편집부
         </p>
       </div>
 

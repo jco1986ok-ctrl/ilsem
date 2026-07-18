@@ -81,10 +81,15 @@ export function getAllPosts(): BlogPostMeta[] {
   return files
     .map((file) => {
       const post = parsePostFile(file);
+      const mtime = fs.statSync(path.join(BLOG_DIR, file)).mtimeMs;
       const { content: _content, ...meta } = post;
-      return meta;
+      return { ...meta, mtime };
     })
-    .sort((a, b) => (a.date < b.date ? 1 : -1));
+    .sort((a, b) => {
+      if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+      return b.mtime - a.mtime;
+    })
+    .map(({ mtime: _mtime, ...meta }) => meta);
 }
 
 export function getPostBySlug(slug: string): BlogPost | null {

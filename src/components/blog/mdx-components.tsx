@@ -3,6 +3,7 @@ import type { ReactNode, ComponentPropsWithoutRef } from 'react';
 import { slugify } from '@/lib/blog-utils';
 import SanjaeCompensation1Min from '@/components/blog/posts/SanjaeCompensation1Min';
 import SanjaeDocuments5 from '@/components/blog/posts/SanjaeDocuments5';
+import SanjaeRejection4Steps from '@/components/blog/posts/SanjaeRejection4Steps';
 
 function getText(node: ReactNode): string {
   if (typeof node === 'string' || typeof node === 'number') return String(node);
@@ -141,4 +142,5 @@ export const mdxComponents = {
   CalculatorCTA,
   SanjaeCompensation1Min,
   SanjaeDocuments5,
+  SanjaeRejection4Steps,
 };

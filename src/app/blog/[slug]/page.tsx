@@ -61,7 +61,7 @@ export default async function BlogPostPage({ params }: Props) {
   if (!post) notFound();
 
   const source = transformDirectives(post.content);
-  const toc = extractToc(post.content);
+  const toc = post.customLayout ? [] : extractToc(post.content);
   const { prev, next } = getAdjacentPosts(slug);
 
   return (
@@ -72,25 +72,27 @@ export default async function BlogPostPage({ params }: Props) {
             ← 블로그 목록
           </Link>
 
-          <header className="blog-post-header">
-            <h1 className="blog-post-title">{post.title}</h1>
-            <p className="blog-post-meta">
-              {formatDate(post.date)}
-              <span aria-hidden="true"> · </span>
-              {post.readingMinutes}분 소요
-            </p>
-            {post.tags.length > 0 && (
-              <div className="blog-post-tags">
-                {post.tags.map((tag) => (
-                  <span key={tag} className="blog-tag">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-          </header>
+          {!post.customLayout && (
+            <header className="blog-post-header">
+              <h1 className="blog-post-title">{post.title}</h1>
+              <p className="blog-post-meta">
+                {formatDate(post.date)}
+                <span aria-hidden="true"> · </span>
+                {post.readingMinutes}분 소요
+              </p>
+              {post.tags.length > 0 && (
+                <div className="blog-post-tags">
+                  {post.tags.map((tag) => (
+                    <span key={tag} className="blog-tag">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </header>
+          )}
 
-          <div className="blog-prose">
+          <div className={post.customLayout ? undefined : 'blog-prose'}>
             <MDXRemote
               source={source}
               components={mdxComponents}
@@ -105,7 +107,7 @@ export default async function BlogPostPage({ params }: Props) {
           <PostNavigation prev={prev} next={next} />
         </article>
 
-        <TableOfContents items={toc} />
+        {!post.customLayout && <TableOfContents items={toc} />}
       </div>
     </div>
   );

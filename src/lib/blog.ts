@@ -54,6 +54,11 @@ function parsePostFile(filename: string): BlogPost {
   const stats = readingTime(content);
   const frontmatter = data as BlogFrontmatter;
 
+  const readingMinutes =
+    typeof frontmatter.readingMinutes === 'number'
+      ? frontmatter.readingMinutes
+      : Math.max(1, Math.ceil(stats.minutes));
+
   return {
     slug,
     title: frontmatter.title ?? slug,
@@ -61,8 +66,9 @@ function parsePostFile(filename: string): BlogPost {
     description: frontmatter.description ?? '',
     tags: Array.isArray(frontmatter.tags) ? frontmatter.tags : [],
     image: frontmatter.image,
-    readingTime: stats.text,
-    readingMinutes: Math.max(1, Math.ceil(stats.minutes)),
+    customLayout: Boolean(frontmatter.customLayout),
+    readingTime: `${readingMinutes} min read`,
+    readingMinutes,
     content,
   };
 }

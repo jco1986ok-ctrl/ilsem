@@ -26,6 +26,9 @@ export type BlogFrontmatter = {
   description: string;
   tags: string[];
   image?: string;
+  /** Skip default blog header/prose chrome — article supplies its own layout */
+  customLayout?: boolean;
+  readingMinutes?: number;
 };
 
 export type BlogPostMeta = BlogFrontmatter & {

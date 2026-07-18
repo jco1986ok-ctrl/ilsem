@@ -8,7 +8,6 @@ import PostNavigation from '@/components/blog/PostNavigation';
 import TableOfContents from '@/components/blog/TableOfContents';
 import {
   extractToc,
-  formatDate,
   getAdjacentPosts,
   getAllSlugs,
   getPostBySlug,
@@ -39,7 +38,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: post.description,
       url: `/blog/${post.slug}`,
       type: 'article',
-      publishedTime: post.date,
       tags: post.tags,
       ...(post.image
         ? { images: [{ url: post.image, alt: post.title }] }
@@ -75,11 +73,7 @@ export default async function BlogPostPage({ params }: Props) {
           {!post.customLayout && (
             <header className="blog-post-header">
               <h1 className="blog-post-title">{post.title}</h1>
-              <p className="blog-post-meta">
-                {formatDate(post.date)}
-                <span aria-hidden="true"> · </span>
-                {post.readingMinutes}분 소요
-              </p>
+              <p className="blog-post-meta">{post.readingMinutes}분 소요</p>
               {post.tags.length > 0 && (
                 <div className="blog-post-tags">
                   {post.tags.map((tag) => (

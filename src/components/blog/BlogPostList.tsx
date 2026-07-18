@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import type { BlogPostMeta } from '@/lib/blog-utils';
-import { formatDate } from '@/lib/blog-utils';
 
 type Props = {
   posts: BlogPostMeta[];
@@ -50,11 +49,7 @@ export default function BlogPostList({ posts, tags }: Props) {
             <li key={post.slug}>
               <Link href={`/blog/${post.slug}`} className="blog-card">
                 <h2 className="blog-card-title">{post.title}</h2>
-                <p className="blog-card-meta">
-                  {formatDate(post.date)}
-                  <span aria-hidden="true"> · </span>
-                  {post.readingMinutes}분 소요
-                </p>
+                <p className="blog-card-meta">{post.readingMinutes}분 소요</p>
                 <p className="blog-card-desc">{post.description}</p>
                 {post.tags.length > 0 && (
                   <div className="blog-card-tags">

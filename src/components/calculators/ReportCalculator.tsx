@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import {
   calcInjuryReport,
   calcRetireReport,
@@ -177,71 +177,6 @@ export default function ReportCalculator() {
 
   const result = mode === 'injury' ? injuryResult : retireResult;
 
-  // PDF 저장 (수정된 버전)
-  const reportRef = useRef<HTMLDivElement>(null);
-  const [isPdfLoading, setIsPdfLoading] = useState(false);
-
-  const handlePDF = useCallback(async () => {
-    if (!reportRef.current) return;
-    if (isPdfLoading) return;
-
-    setIsPdfLoading(true);
-
-    try {
-      const html2canvasModule = await import('html2canvas');
-      const html2canvas = html2canvasModule.default;
-      const jspdfModule = await import('jspdf');
-      const jsPDF = jspdfModule.jsPDF;
-
-      const element = reportRef.current;
-
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        windowWidth: element.scrollWidth,
-        windowHeight: element.scrollHeight,
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfPageHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pdfWidth;
-      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-
-      if (imgHeight <= pdfPageHeight) {
-        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-      } else {
-        let heightLeft = imgHeight;
-        let position = 0;
-        let page = 0;
-
-        while (heightLeft > 0) {
-          if (page > 0) pdf.addPage();
-          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-          heightLeft -= pdfPageHeight;
-          position   -= pdfPageHeight;
-          page++;
-        }
-      }
-
-      const now = new Date();
-      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      const fileName = mode === 'injury'
-        ? `일셈_산재보상_종합리포트_${dateStr}.pdf`
-        : `일셈_퇴직정산_종합리포트_${dateStr}.pdf`;
-
-      pdf.save(fileName);
-    } catch (error) {
-      console.error('PDF 생성 오류:', error);
-      alert('PDF 생성 중 오류가 발생했습니다. 브라우저를 새로고침 후 다시 시도해 주세요.');
-    } finally {
-      setIsPdfLoading(false);
-    }
-  }, [mode, isPdfLoading]);
-
   function handleCalc() {
     setCal(false);
     setTimeout(() => setCal(true), 0);
@@ -395,7 +330,7 @@ export default function ReportCalculator() {
 
       {/* 결과 영역 */}
       {result && (
-        <div ref={reportRef}>
+        <div>
           <div className="space-y-6">
 
             {/* 리포트 헤더 */}
@@ -485,11 +420,6 @@ export default function ReportCalculator() {
       {/* PDF 저장 + 상담 안내 */}
       {result && (
         <div className="space-y-4 print:hidden">
-          <button onClick={handlePDF} disabled={isPdfLoading}
-            className="w-full py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition-colors text-lg disabled:opacity-60 disabled:cursor-not-allowed">
-            {isPdfLoading ? '⏳ PDF 생성 중...' : '📄 PDF로 저장하기'}
-          </button>
-
           <AdSlot id="2" label="IRP 계좌 개설 · 퇴직연금 비교" />
 
           {/* 상담 준비 체크리스트 */}

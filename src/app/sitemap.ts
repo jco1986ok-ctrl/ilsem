@@ -16,7 +16,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/calc/self-diagnosis',
   ];
 
-  const staticPages = ['/', '/report', '/privacy', '/terms'];
+  const staticPages = ['/', '/report', '/blog', '/privacy', '/terms'];
 
   return [
     ...staticPages.map((path) => ({

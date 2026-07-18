@@ -8,6 +8,7 @@ const navItems = [
   { label: '계산기', href: '/calc/average-wage' },
   { label: '가이드', href: '/guide' },
   { label: '종합 리포트', href: '/report' },
+  { label: '블로그', href: '/blog' },
 ];
 
 export default function Header() {
@@ -24,6 +25,9 @@ export default function Header() {
           {/* 로고 */}
           <Link href="/" className="flex items-center gap-2">
             <span className="text-xl font-bold text-[#2563EB]">일셈</span>
+            <span className="hidden sm:inline-block text-xs text-slate-400 border-l border-slate-200 pl-2 ml-1">
+              일하는 사람을 위한 계산 플랫폼
+            </span>
           </Link>
 
           {/* 데스크톱 네비게이션 */}

@@ -8,6 +8,7 @@ import MusculoskeletalDiscGuide from '@/components/blog/posts/MusculoskeletalDis
 import PartTimeSanjaeGuide from '@/components/blog/posts/PartTimeSanjaeGuide';
 import DisabilityGradeGuide from '@/components/blog/posts/DisabilityGradeGuide';
 import InjuryLeavePayGuide from '@/components/blog/posts/InjuryLeavePayGuide';
+import CommuteAccidentGuide from '@/components/blog/posts/CommuteAccidentGuide';
 
 function getText(node: ReactNode): string {
   if (typeof node === 'string' || typeof node === 'number') return String(node);
@@ -151,4 +152,5 @@ export const mdxComponents = {
   PartTimeSanjaeGuide,
   DisabilityGradeGuide,
   InjuryLeavePayGuide,
+  CommuteAccidentGuide,
 };
